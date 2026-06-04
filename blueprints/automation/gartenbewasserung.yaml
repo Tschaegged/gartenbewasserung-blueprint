@@ -1,5 +1,6 @@
 blueprint:
   name: Gartenbewässerung
+  source_url: https://github.com/Tschaegged/gartenbewasserung-blueprint/blob/main/blueprints/automation/gartenbewasserung.yaml
   description: >
     Bewässert beliebig viele Ventile nacheinander täglich zur eingestellten Zeit.
     Weitere Zeiten per Klick hinzufügbar. Wettercheck: Regen, Regenwahrscheinlichkeit,
