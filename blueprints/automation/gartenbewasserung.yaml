@@ -1,225 +1,406 @@
 blueprint:
   name: Gartenbewässerung
   source_url: https://github.com/Tschaegged/gartenbewasserung-blueprint/blob/main/blueprints/automation/gartenbewasserung.yaml
-  description: >
-    Bewässert beliebig viele Ventile nacheinander täglich zur eingestellten Zeit.
-    Weitere Zeiten per Klick hinzufügbar. Wettercheck: Regen, Regenwahrscheinlichkeit,
-    Temperaturvorhersage und Saisonschaltung. Optionaler Bodenfeuchtigkeitssensor.
+  description: >-
+    Bewässert bis zu 6 Ventile nacheinander täglich zur eingestellten Zeit. Jedes
+    Ventil hat einen eigenen optionalen Feuchtigkeitssensor – so bewässert z.B.
+    Ventil 1 nur wenn der Boden trocken ist, Ventil 2 immer. Wettercheck: Regen,
+    Regenwahrscheinlichkeit, Temperaturvorhersage und Saisonschaltung.
     Push-Benachrichtigungen bei Abschluss oder übersprungener Bewässerung.
+
   domain: automation
   author: Claude
-
   input:
-
-    # ══ Immer sichtbar ════════════════════════════════════════════
     trigger_time_1:
-      name: "Bewässerungszeit"
-      description: "Uhrzeit für die tägliche Bewässerung (z.B. 06:00)"
+      name: Bewässerungszeit
+      description: Uhrzeit für die tägliche Bewässerung (z.B. 06:00)
       selector:
         time: {}
-
-    valves:
-      name: "Bewässerungsventile"
-      description: "Ventile in gewünschter Reihenfolge auswählen – werden nacheinander aktiviert"
-      selector:
-        entity:
-          multiple: true
-          filter:
-            - domain: switch
-            - domain: valve
-
     irrigation_duration:
-      name: "Bewässerungsdauer pro Ventil (Minuten)"
+      name: Bewässerungsdauer pro Ventil (Minuten)
       default: 20
       selector:
         number:
-          min: 1
-          max: 120
-          step: 1
+          min: 1.0
+          max: 120.0
+          step: 1.0
           unit_of_measurement: min
           mode: box
-
-    weather_entity:
-      name: "Wettervorhersage"
-      description: "Wetterentität für Regen- und Temperaturprüfung"
-      selector:
-        entity:
-          domain: weather
-
-    # ══ Weitere Zeiten (eingeklappt) ══════════════════════════════
     further_times:
-      name: "Weitere Bewässerungszeiten"
-      description: "Bis zu 2 zusätzliche Tageszeiten aktivierbar"
+      name: Weitere Bewässerungszeiten
+      description: Bis zu 2 zusätzliche Tageszeiten aktivierbar
       icon: mdi:clock-plus-outline
       collapsed: true
       input:
         enable_time_2:
-          name: "Zweite Bewässerungszeit aktivieren"
+          name: Zweite Bewässerungszeit aktivieren
           default: false
           selector:
             boolean: {}
-
         trigger_time_2:
-          name: "Bewässerungszeit 2"
-          default: "12:00:00"
+          name: Bewässerungszeit 2
+          default: '12:00:00'
           selector:
             time: {}
-
         enable_time_3:
-          name: "Dritte Bewässerungszeit aktivieren"
+          name: Dritte Bewässerungszeit aktivieren
           default: false
           selector:
             boolean: {}
-
         trigger_time_3:
-          name: "Bewässerungszeit 3"
-          default: "18:00:00"
+          name: Bewässerungszeit 3
+          default: '18:00:00'
           selector:
             time: {}
-
-    # ══ Bodenfeuchte (eingeklappt) ════════════════════════════════
-    soil_section:
-      name: "Bodenfeuchte"
-      description: "Bewässerung überspringen wenn Boden bereits feucht genug"
-      icon: mdi:water-percent
-      collapsed: true
+    valve_section_1:
+      name: Ventil 1
+      icon: mdi:valve
+      collapsed: false
       input:
-        moisture_sensor:
-          name: "Bodenfeuchtigkeitssensor (optional)"
-          description: "Leer lassen um diesen Check zu deaktivieren"
-          default: ""
+        valve_1:
+          name: Schalter / Ventil
+          description: Leer lassen um dieses Ventil zu deaktivieren
+          default: ''
           selector:
             entity:
               filter:
-                - domain: sensor
-                  device_class: moisture
-
-        moisture_threshold:
-          name: "Feuchtigkeitsschwellwert"
-          description: "Bewässerung überspringen wenn Bodenfeuchtigkeit ≥ diesem Wert"
+              - domain:
+                - switch
+              - domain:
+                - valve
+              multiple: false
+        valve_1_moisture_sensor:
+          name: Feuchtigkeitssensor (optional)
+          description: Bewässerung nur starten wenn Feuchtigkeit unter dem Schwellwert liegt
+          default: ''
+          selector:
+            entity:
+              filter:
+              - domain:
+                - sensor
+                device_class:
+                - moisture
+              multiple: false
+        valve_1_moisture_threshold:
+          name: Feuchtigkeitsschwellwert
+          description: Ventil überspringen wenn Bodenfeuchtigkeit ≥ diesem Wert
           default: 60
           selector:
             number:
-              min: 0
-              max: 100
-              step: 5
-              unit_of_measurement: "%"
+              min: 0.0
+              max: 100.0
+              step: 5.0
+              unit_of_measurement: '%'
               mode: slider
-
-    # ══ Wettercheck & Saison (eingeklappt) ════════════════════════
+    valve_section_2:
+      name: Ventil 2
+      icon: mdi:valve
+      collapsed: true
+      input:
+        valve_2:
+          name: Schalter / Ventil
+          description: Leer lassen um dieses Ventil zu deaktivieren
+          default: ''
+          selector:
+            entity:
+              filter:
+              - domain:
+                - switch
+              - domain:
+                - valve
+              multiple: false
+        valve_2_moisture_sensor:
+          name: Feuchtigkeitssensor (optional)
+          description: Bewässerung nur starten wenn Feuchtigkeit unter dem Schwellwert liegt
+          default: ''
+          selector:
+            entity:
+              filter:
+              - domain:
+                - sensor
+                device_class:
+                - moisture
+              multiple: false
+        valve_2_moisture_threshold:
+          name: Feuchtigkeitsschwellwert
+          description: Ventil überspringen wenn Bodenfeuchtigkeit ≥ diesem Wert
+          default: 60
+          selector:
+            number:
+              min: 0.0
+              max: 100.0
+              step: 5.0
+              unit_of_measurement: '%'
+              mode: slider
+    valve_section_3:
+      name: Ventil 3
+      icon: mdi:valve
+      collapsed: true
+      input:
+        valve_3:
+          name: Schalter / Ventil
+          description: Leer lassen um dieses Ventil zu deaktivieren
+          default: ''
+          selector:
+            entity:
+              filter:
+              - domain:
+                - switch
+              - domain:
+                - valve
+              multiple: false
+        valve_3_moisture_sensor:
+          name: Feuchtigkeitssensor (optional)
+          description: Bewässerung nur starten wenn Feuchtigkeit unter dem Schwellwert liegt
+          default: ''
+          selector:
+            entity:
+              filter:
+              - domain:
+                - sensor
+                device_class:
+                - moisture
+              multiple: false
+        valve_3_moisture_threshold:
+          name: Feuchtigkeitsschwellwert
+          description: Ventil überspringen wenn Bodenfeuchtigkeit ≥ diesem Wert
+          default: 60
+          selector:
+            number:
+              min: 0.0
+              max: 100.0
+              step: 5.0
+              unit_of_measurement: '%'
+              mode: slider
+    valve_section_4:
+      name: Ventil 4
+      icon: mdi:valve
+      collapsed: true
+      input:
+        valve_4:
+          name: Schalter / Ventil
+          description: Leer lassen um dieses Ventil zu deaktivieren
+          default: ''
+          selector:
+            entity:
+              filter:
+              - domain:
+                - switch
+              - domain:
+                - valve
+              multiple: false
+        valve_4_moisture_sensor:
+          name: Feuchtigkeitssensor (optional)
+          description: Bewässerung nur starten wenn Feuchtigkeit unter dem Schwellwert liegt
+          default: ''
+          selector:
+            entity:
+              filter:
+              - domain:
+                - sensor
+                device_class:
+                - moisture
+              multiple: false
+        valve_4_moisture_threshold:
+          name: Feuchtigkeitsschwellwert
+          description: Ventil überspringen wenn Bodenfeuchtigkeit ≥ diesem Wert
+          default: 60
+          selector:
+            number:
+              min: 0.0
+              max: 100.0
+              step: 5.0
+              unit_of_measurement: '%'
+              mode: slider
+    valve_section_5:
+      name: Ventil 5
+      icon: mdi:valve
+      collapsed: true
+      input:
+        valve_5:
+          name: Schalter / Ventil
+          description: Leer lassen um dieses Ventil zu deaktivieren
+          default: ''
+          selector:
+            entity:
+              filter:
+              - domain:
+                - switch
+              - domain:
+                - valve
+              multiple: false
+        valve_5_moisture_sensor:
+          name: Feuchtigkeitssensor (optional)
+          description: Bewässerung nur starten wenn Feuchtigkeit unter dem Schwellwert liegt
+          default: ''
+          selector:
+            entity:
+              filter:
+              - domain:
+                - sensor
+                device_class:
+                - moisture
+              multiple: false
+        valve_5_moisture_threshold:
+          name: Feuchtigkeitsschwellwert
+          description: Ventil überspringen wenn Bodenfeuchtigkeit ≥ diesem Wert
+          default: 60
+          selector:
+            number:
+              min: 0.0
+              max: 100.0
+              step: 5.0
+              unit_of_measurement: '%'
+              mode: slider
+    valve_section_6:
+      name: Ventil 6
+      icon: mdi:valve
+      collapsed: true
+      input:
+        valve_6:
+          name: Schalter / Ventil
+          description: Leer lassen um dieses Ventil zu deaktivieren
+          default: ''
+          selector:
+            entity:
+              filter:
+              - domain:
+                - switch
+              - domain:
+                - valve
+              multiple: false
+        valve_6_moisture_sensor:
+          name: Feuchtigkeitssensor (optional)
+          description: Bewässerung nur starten wenn Feuchtigkeit unter dem Schwellwert liegt
+          default: ''
+          selector:
+            entity:
+              filter:
+              - domain:
+                - sensor
+                device_class:
+                - moisture
+              multiple: false
+        valve_6_moisture_threshold:
+          name: Feuchtigkeitsschwellwert
+          description: Ventil überspringen wenn Bodenfeuchtigkeit ≥ diesem Wert
+          default: 60
+          selector:
+            number:
+              min: 0.0
+              max: 100.0
+              step: 5.0
+              unit_of_measurement: '%'
+              mode: slider
+    weather_entity:
+      name: Wettervorhersage
+      description: Wetterentität für Regen- und Temperaturprüfung
+      selector:
+        entity:
+          domain:
+          - weather
+          reorder: false
+          multiple: false
     weather_section:
-      name: "Wettercheck & Saison"
-      description: "Schwellwerte für Regen, Temperatur und Winterpause"
+      name: Wettercheck & Saison
+      description: Schwellwerte für Regen, Temperatur und Winterpause
       icon: mdi:weather-partly-cloudy
       collapsed: true
       input:
         forecast_hours:
-          name: "Regenvorausschau (Stunden)"
-          description: "Wie viele Stunden voraus auf Regen geprüft wird"
+          name: Regenvorausschau (Stunden)
+          description: Wie viele Stunden voraus auf Regen geprüft wird
           default: 12
           selector:
             number:
-              min: 1
-              max: 48
-              step: 1
+              min: 1.0
+              max: 48.0
+              step: 1.0
               unit_of_measurement: h
               mode: slider
-
         rain_probability_threshold:
-          name: "Max. Regenwahrscheinlichkeit"
-          description: "Kein Bewässern wenn Regenwahrscheinlichkeit diesen Wert überschreitet"
+          name: Max. Regenwahrscheinlichkeit
+          description: Kein Bewässern wenn Regenwahrscheinlichkeit diesen Wert überschreitet
           default: 40
           selector:
             number:
-              min: 0
-              max: 100
-              step: 5
-              unit_of_measurement: "%"
+              min: 0.0
+              max: 100.0
+              step: 5.0
+              unit_of_measurement: '%'
               mode: slider
-
         min_temperature:
-          name: "Frostschutz – aktuelle Temperatur"
-          description: "Kein Bewässern wenn aktuelle Temperatur unter diesem Wert liegt"
+          name: Frostschutz – aktuelle Temperatur
+          description: Kein Bewässern wenn aktuelle Temperatur unter diesem Wert liegt
           default: 5
           selector:
             number:
-              min: -10
-              max: 20
-              step: 1
-              unit_of_measurement: "°C"
+              min: -10.0
+              max: 20.0
+              step: 1.0
+              unit_of_measurement: °C
               mode: slider
-
         min_useful_temperature:
-          name: "Nutztemperatur – Tagesmaximum"
-          description: >
+          name: Nutztemperatur – Tagesmaximum
+          description: >-
             Kein Bewässern wenn das vorhergesagte Tagesmaximum unter diesem Wert liegt.
             An kalten oder bedeckten Tagen verdunsten Pflanzen wenig. Typisch: 10–15 °C.
           default: 12
           selector:
             number:
-              min: 0
-              max: 30
-              step: 1
-              unit_of_measurement: "°C"
+              min: 0.0
+              max: 30.0
+              step: 1.0
+              unit_of_measurement: °C
               mode: slider
-
         season_start_month:
-          name: "Saisonbeginn (Monat)"
-          description: "Bewässerung erst ab diesem Monat aktiv. Standard: April (4)"
+          name: Saisonbeginn (Monat)
+          description: 'Bewässerung erst ab diesem Monat aktiv. Standard: April (4)'
           default: 4
           selector:
             number:
-              min: 1
-              max: 12
-              step: 1
+              min: 1.0
+              max: 12.0
+              step: 1.0
               mode: box
-
         season_end_month:
-          name: "Saisonende (Monat)"
-          description: "Bewässerung bis einschließlich diesem Monat aktiv. Standard: Oktober (10)"
+          name: Saisonende (Monat)
+          description: 'Bewässerung bis einschließlich diesem Monat aktiv. Standard: Oktober (10)'
           default: 10
           selector:
             number:
-              min: 1
-              max: 12
-              step: 1
+              min: 1.0
+              max: 12.0
+              step: 1.0
               mode: box
-
-    # ══ Benachrichtigungen (eingeklappt) ══════════════════════════
     notify_section:
-      name: "Benachrichtigungen"
-      description: "Push-Nachrichten an Mobilgeräte senden"
+      name: Benachrichtigungen
+      description: Push-Nachrichten an Mobilgeräte senden
       icon: mdi:bell-outline
       collapsed: true
       input:
         notify_devices:
-          name: "Benachrichtigungsgeräte"
-          description: "Ein oder mehrere Geräte auswählen. Leer lassen für keine Benachrichtigung."
+          name: Benachrichtigungsgeräte
+          description: Ein oder mehrere Geräte auswählen. Leer lassen für keine Benachrichtigung.
           default: []
           selector:
             device:
               integration: mobile_app
               multiple: true
-
         notify_on_complete:
-          name: "Nach Abschluss benachrichtigen"
-          description: "Nachricht senden wenn alle Ventile bewässert wurden"
+          name: Nach Abschluss benachrichtigen
+          description: Nachricht senden wenn die Bewässerungsrunde abgeschlossen ist
           default: true
           selector:
             boolean: {}
-
         notify_on_skip:
-          name: "Bei übersprungener Bewässerung benachrichtigen"
-          description: "Nachricht senden wenn Saison, Wetter oder Bodenfeuchte die Bewässerung verhindert"
+          name: Bei übersprungener Bewässerung benachrichtigen
+          description: Nachricht senden wenn Saison oder Wetter die Bewässerung verhindern
           default: false
           selector:
             boolean: {}
-
 variables:
-  valves_list: !input valves
   irrigation_duration_val: !input irrigation_duration
-  moisture_sensor_val: !input moisture_sensor
-  moisture_threshold_val: !input moisture_threshold
   weather_entity: !input weather_entity
   forecast_hours: !input forecast_hours
   rain_probability_threshold: !input rain_probability_threshold
@@ -230,153 +411,157 @@ variables:
   notify_devices_list: !input notify_devices
   notify_on_complete_val: !input notify_on_complete
   notify_on_skip_val: !input notify_on_skip
-
+  v1: !input valve_1
+  v1_s: !input valve_1_moisture_sensor
+  v1_t: !input valve_1_moisture_threshold
+  v2: !input valve_2
+  v2_s: !input valve_2_moisture_sensor
+  v2_t: !input valve_2_moisture_threshold
+  v3: !input valve_3
+  v3_s: !input valve_3_moisture_sensor
+  v3_t: !input valve_3_moisture_threshold
+  v4: !input valve_4
+  v4_s: !input valve_4_moisture_sensor
+  v4_t: !input valve_4_moisture_threshold
+  v5: !input valve_5
+  v5_s: !input valve_5_moisture_sensor
+  v5_t: !input valve_5_moisture_threshold
+  v6: !input valve_6
+  v6_s: !input valve_6_moisture_sensor
+  v6_t: !input valve_6_moisture_threshold
 triggers:
-  - trigger: time
-    at: !input trigger_time_1
-  - trigger: time
-    at: !input trigger_time_2
-    enabled: !input enable_time_2
-  - trigger: time
-    at: !input trigger_time_3
-    enabled: !input enable_time_3
-
+- trigger: time
+  at: !input trigger_time_1
+- trigger: time
+  at: !input trigger_time_2
+  enabled: !input enable_time_2
+- trigger: time
+  at: !input trigger_time_3
+  enabled: !input enable_time_3
 conditions: []
-
 actions:
-
-  # ── 1. Saison prüfen ─────────────────────────────────────────
-  - variables:
-      season_active: >
-        {% set m = now().month %}
-        {% set s = season_start_month | int %}
-        {% set e = season_end_month | int %}
-        {{ m >= s and m <= e if s <= e else (m >= s or m <= e) }}
-
+- variables:
+    season_active: '{% set m = now().month %} {% set s = season_start_month | int
+      %} {% set e = season_end_month | int %} {{ m >= s and m <= e if s <= e else
+      (m >= s or m <= e) }}'
+- if:
+  - condition: template
+    value_template: '{{ not season_active }}'
+  then:
   - if:
-      - condition: template
-        value_template: "{{ not season_active }}"
+    - condition: template
+      value_template: '{{ notify_on_skip_val and notify_devices_list | count > 0 }}'
     then:
-      - if:
-          - condition: template
-            value_template: "{{ notify_on_skip_val and notify_devices_list | count > 0 }}"
-        then:
-          - action: notify.send_message
-            target:
-              device_id: !input notify_devices
-            data:
-              title: "🌿 Gartenbewässerung"
-              message: >
-                Bewässerung übersprungen – Saisonpause
-                ({{ now().strftime('%B') }}, aktive Saison: Monat {{ season_start_month }}–{{ season_end_month }})
-      - stop: "Saisonpause"
-
-  # ── 2. Wettervorhersage abrufen ──────────────────────────────
-  - action: weather.get_forecasts
-    data:
-      type: hourly
-    target:
-      entity_id: "{{ weather_entity }}"
-    response_variable: forecast_response
-
-  # ── 3. Wetter auswerten ──────────────────────────────────────
-  - variables:
-      weather_skip: >
-        {% set forecast = forecast_response[weather_entity]['forecast'][:forecast_hours | int] %}
-        {% set ns = namespace(total_rain=0.0, max_prob=0, max_temp=-99.0) %}
-        {% for h in forecast %}
-          {% set ns.total_rain = ns.total_rain + (h.precipitation | default(0) | float) %}
-          {% set ns.max_prob = [ns.max_prob, h.precipitation_probability | default(0) | int] | max %}
-          {% set ns.max_temp = [ns.max_temp, h.temperature | default(-99) | float] | max %}
-        {% endfor %}
-        {% set condition = states(weather_entity) %}
-        {% set current_temp = state_attr(weather_entity, 'temperature') | float(99) %}
-        {{ ns.total_rain > 0
-           or ns.max_prob > rain_probability_threshold | int
-           or condition in ['rainy', 'pouring', 'lightning', 'lightning-rainy', 'hail', 'snowy-rainy']
-           or current_temp < min_temperature | float
-           or ns.max_temp < min_useful_temperature | float }}
-      weather_skip_reason: >
-        {% set forecast = forecast_response[weather_entity]['forecast'][:forecast_hours | int] %}
-        {% set ns = namespace(total_rain=0.0, max_prob=0, max_temp=-99.0) %}
-        {% for h in forecast %}
-          {% set ns.total_rain = ns.total_rain + (h.precipitation | default(0) | float) %}
-          {% set ns.max_prob = [ns.max_prob, h.precipitation_probability | default(0) | int] | max %}
-          {% set ns.max_temp = [ns.max_temp, h.temperature | default(-99) | float] | max %}
-        {% endfor %}
-        {% set condition = states(weather_entity) %}
-        {% set current_temp = state_attr(weather_entity, 'temperature') | float(99) %}
-        {% if ns.total_rain > 0 %}Regen vorhergesagt ({{ '%.1f' | format(ns.total_rain) }} mm)
-        {% elif ns.max_prob > rain_probability_threshold | int %}Hohe Regenwahrscheinlichkeit ({{ ns.max_prob }}%)
-        {% elif condition in ['rainy', 'pouring', 'lightning', 'lightning-rainy', 'hail', 'snowy-rainy'] %}Aktuell Niederschlag
-        {% elif current_temp < min_temperature | float %}Zu kalt – Frostschutz ({{ current_temp }}°C)
-        {% elif ns.max_temp < min_useful_temperature | float %}Tagesmaximum zu niedrig ({{ '%.1f' | format(ns.max_temp) }}°C)
-        {% else %}Wetter ungünstig
-        {% endif %}
-
-  # ── 4. Abbruch bei ungünstigem Wetter ───────────────────────
+    - action: notify.send_message
+      target:
+        device_id: !input notify_devices
+      data:
+        title: "\U0001F33F Gartenbewässerung"
+        message: 'Bewässerung übersprungen – Saisonpause ({{ now().strftime(''%B'')
+          }}, aktive Saison: Monat {{ season_start_month }}–{{ season_end_month }})'
+  - stop: Saisonpause
+- action: weather.get_forecasts
+  data:
+    type: hourly
+  target:
+    entity_id: '{{ weather_entity }}'
+  response_variable: forecast_response
+- variables:
+    weather_skip: "{% set forecast = forecast_response[weather_entity]['forecast'][:forecast_hours
+      | int] %} {% set ns = namespace(total_rain=0.0, max_prob=0, max_temp=-99.0)
+      %} {% for h in forecast %}\n  {% set ns.total_rain = ns.total_rain + (h.precipitation
+      | default(0) | float) %}\n  {% set ns.max_prob = [ns.max_prob, h.precipitation_probability
+      | default(0) | int] | max %}\n  {% set ns.max_temp = [ns.max_temp, h.temperature
+      | default(-99) | float] | max %}\n{% endfor %} {% set condition = states(weather_entity)
+      %} {% set current_temp = state_attr(weather_entity, 'temperature') | float(99)
+      %} {{ ns.total_rain > 0\n   or ns.max_prob > rain_probability_threshold | int\n
+      \  or condition in ['rainy', 'pouring', 'lightning', 'lightning-rainy', 'hail',
+      'snowy-rainy']\n   or current_temp < min_temperature | float\n   or ns.max_temp
+      < min_useful_temperature | float }}\n"
+    weather_skip_reason: "{% set forecast = forecast_response[weather_entity]['forecast'][:forecast_hours
+      | int] %} {% set ns = namespace(total_rain=0.0, max_prob=0, max_temp=-99.0)
+      %} {% for h in forecast %}\n  {% set ns.total_rain = ns.total_rain + (h.precipitation
+      | default(0) | float) %}\n  {% set ns.max_prob = [ns.max_prob, h.precipitation_probability
+      | default(0) | int] | max %}\n  {% set ns.max_temp = [ns.max_temp, h.temperature
+      | default(-99) | float] | max %}\n{% endfor %} {% set condition = states(weather_entity)
+      %} {% set current_temp = state_attr(weather_entity, 'temperature') | float(99)
+      %} {% if ns.total_rain > 0 %}Regen vorhergesagt ({{ '%.1f' | format(ns.total_rain)
+      }} mm) {% elif ns.max_prob > rain_probability_threshold | int %}Hohe Regenwahrscheinlichkeit
+      ({{ ns.max_prob }}%) {% elif condition in ['rainy', 'pouring', 'lightning',
+      'lightning-rainy', 'hail', 'snowy-rainy'] %}Aktuell Niederschlag {% elif current_temp
+      < min_temperature | float %}Zu kalt – Frostschutz ({{ current_temp }}°C) {%
+      elif ns.max_temp < min_useful_temperature | float %}Tagesmaximum zu niedrig
+      ({{ '%.1f' | format(ns.max_temp) }}°C) {% else %}Wetter ungünstig {% endif
+      %}\n"
+- if:
+  - condition: template
+    value_template: '{{ weather_skip }}'
+  then:
   - if:
-      - condition: template
-        value_template: "{{ weather_skip }}"
+    - condition: template
+      value_template: '{{ notify_on_skip_val and notify_devices_list | count > 0 }}'
     then:
-      - if:
-          - condition: template
-            value_template: "{{ notify_on_skip_val and notify_devices_list | count > 0 }}"
-        then:
-          - action: notify.send_message
-            target:
-              device_id: !input notify_devices
-            data:
-              title: "🌿 Gartenbewässerung"
-              message: "Bewässerung übersprungen – {{ weather_skip_reason | trim }}"
-      - stop: "Wetter ungünstig"
-
-  # ── 5. Alle Ventile nacheinander ─────────────────────────────
-  - repeat:
-      for_each: >
-        {{ valves_list if valves_list is iterable and valves_list is not string
-           else [valves_list] }}
-      sequence:
-        - variables:
-            current_valve: "{{ repeat.item }}"
-            moisture_ok: >
-              {{ moisture_sensor_val == '' or
-                 states(moisture_sensor_val) | float(0) < moisture_threshold_val | float }}
-        - if:
-            - condition: template
-              value_template: "{{ moisture_ok }}"
-          then:
-            - action: homeassistant.turn_on
-              target:
-                entity_id: "{{ current_valve }}"
-            - delay:
-                minutes: "{{ irrigation_duration_val | int }}"
-            - action: homeassistant.turn_off
-              target:
-                entity_id: "{{ current_valve }}"
-
-  # ── 6. Abschluss-Benachrichtigung ────────────────────────────
-  - if:
+    - action: notify.send_message
+      target:
+        device_id: !input notify_devices
+      data:
+        title: "\U0001F33F Gartenbewässerung"
+        message: Bewässerung übersprungen – {{ weather_skip_reason | trim }}
+  - stop: Wetter ungünstig
+- variables:
+    valves_config: "{% set ns = namespace(list=[]) %} {% for item in [\n  {'entity':
+      v1, 'sensor': v1_s, 'threshold': v1_t},\n  {'entity': v2, 'sensor': v2_s,
+      'threshold': v2_t},\n  {'entity': v3, 'sensor': v3_s, 'threshold': v3_t},\n
+      \ {'entity': v4, 'sensor': v4_s, 'threshold': v4_t},\n  {'entity': v5, 'sensor':
+      v5_s, 'threshold': v5_t},\n  {'entity': v6, 'sensor': v6_s, 'threshold': v6_t}\n]
+      %}\n  {% if item.entity is not none and item.entity != '' %}\n    {% set ns.list
+      = ns.list + [item] %}\n  {% endif %}\n{% endfor %} {{ ns.list }}\n"
+- if:
+  - condition: template
+    value_template: '{{ valves_config | count == 0 }}'
+  then:
+  - stop: Keine Ventile konfiguriert
+- repeat:
+    for_each: '{{ valves_config }}'
+    sequence:
+    - variables:
+        current_valve: '{{ repeat.item.entity }}'
+        moisture_ok: "{{ repeat.item.sensor is none or repeat.item.sensor == '' or\n
+          \  states(repeat.item.sensor) | float(0) < repeat.item.threshold | float
+          }}\n"
+    - if:
       - condition: template
-        value_template: "{{ notify_on_complete_val and notify_devices_list | count > 0 }}"
-    then:
-      - variables:
-          completion_message: >
-            {% set vlist = valves_list if valves_list is iterable and valves_list is not string
-               else [valves_list] %}
-            {% set count = vlist | count %}
-            {% set total = count * irrigation_duration_val | int %}
-            {% set ns = namespace(names=[]) %}
-            {% for v in vlist %}
-              {% set ns.names = ns.names + [state_attr(v, 'friendly_name') | default(v)] %}
-            {% endfor %}
-            {{ ns.names | join(', ') }} – je {{ irrigation_duration_val }} Min. (Gesamt: {{ total }} Min.)
-      - action: notify.send_message
+        value_template: '{{ moisture_ok }}'
+      then:
+      - action: homeassistant.turn_on
         target:
-          device_id: !input notify_devices
-        data:
-          title: "✅ Gartenbewässerung abgeschlossen"
-          message: "{{ completion_message | trim }}"
-
+          entity_id: '{{ current_valve }}'
+      - delay:
+          minutes: '{{ irrigation_duration_val | int }}'
+      - action: homeassistant.turn_off
+        target:
+          entity_id: '{{ current_valve }}'
+- if:
+  - condition: template
+    value_template: '{{ notify_on_complete_val and notify_devices_list | count > 0 }}'
+  then:
+  - variables:
+      completion_message: "{% set ns = namespace(watered=[], skipped=[]) %} {% for
+        item in valves_config %}\n  {% set ok = item.sensor is none or item.sensor
+        == ''\n              or states(item.sensor) | float(0) < item.threshold |
+        float %}\n  {% set name = state_attr(item.entity, 'friendly_name') | default(item.entity)
+        %}\n  {% if ok %}\n    {% set ns.watered = ns.watered + [name] %}\n  {% else
+        %}\n    {% set ns.skipped = ns.skipped + [name ~ ' (Feuchte ausreichend)']
+        %}\n  {% endif %}\n{% endfor %} {% set ns2 = namespace(parts=[]) %} {% if
+        ns.watered %}\n  {% set ns2.parts = ns2.parts + ['Bewässert: ' ~ ns.watered
+        | join(', ') ~ ' – je ' ~ irrigation_duration_val ~ ' Min.'] %}\n{% endif
+        %} {% if ns.skipped %}\n  {% set ns2.parts = ns2.parts + ['Übersprungen: '
+        ~ ns.skipped | join(', ')] %}\n{% endif %} {{ ns2.parts | join('\\n') }}\n"
+  - action: notify.send_message
+    target:
+      device_id: !input notify_devices
+    data:
+      title: ✅ Gartenbewässerung abgeschlossen
+      message: '{{ completion_message | trim }}'
 mode: single
 max_exceeded: silent
