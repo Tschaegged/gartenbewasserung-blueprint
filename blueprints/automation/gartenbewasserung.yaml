@@ -2,11 +2,12 @@ blueprint:
   name: Gartenbewässerung
   source_url: https://github.com/Tschaegged/gartenbewasserung-blueprint/blob/main/blueprints/automation/gartenbewasserung.yaml
   description: >-
-    Bewässert bis zu 6 Ventile nacheinander täglich zur eingestellten Zeit. Jedes
-    Ventil hat einen eigenen optionalen Feuchtigkeitssensor – so bewässert z.B.
-    Ventil 1 nur wenn der Boden trocken ist, Ventil 2 immer. Wettercheck: Regen,
-    Regenwahrscheinlichkeit, Temperaturvorhersage und Saisonschaltung.
-    Push-Benachrichtigungen bei Abschluss oder übersprungener Bewässerung.
+    Bewässert beliebig viele Ventile nacheinander täglich zur eingestellten Zeit.
+    Ventile bequem per „Hinzufügen“-Button anlegen – jedes mit optionalem eigenem
+    Feuchtigkeitssensor und Schwellwert (Ventil wird übersprungen wenn der Boden
+    feucht genug ist). Wettercheck: Regen, Regenwahrscheinlichkeit,
+    Temperaturvorhersage und Saisonschaltung. Push-Benachrichtigungen bei
+    Abschluss oder übersprungener Bewässerung.
 
   domain: automation
   author: Claude
@@ -16,6 +17,51 @@ blueprint:
       description: Uhrzeit für die tägliche Bewässerung (z.B. 06:00)
       selector:
         time: {}
+    valves:
+      name: Bewässerungsventile
+      description: >-
+        Ventile in gewünschter Reihenfolge hinzufügen – sie werden nacheinander
+        aktiviert. Optional pro Ventil einen Bodenfeuchtigkeitssensor wählen:
+        Liegt dessen Wert über dem Schwellwert, wird nur dieses Ventil
+        übersprungen.
+      selector:
+        object:
+          label_field: valve
+          description_field: moisture_sensor
+          multiple: true
+          fields:
+            valve:
+              label: Ventil / Schalter
+              required: true
+              selector:
+                entity:
+                  filter:
+                  - domain:
+                    - switch
+                  - domain:
+                    - valve
+                  multiple: false
+            moisture_sensor:
+              label: Feuchtigkeitssensor (optional)
+              required: false
+              selector:
+                entity:
+                  filter:
+                  - domain:
+                    - sensor
+                    device_class:
+                    - moisture
+                  multiple: false
+            moisture_threshold:
+              label: Feuchtigkeitsschwellwert in % (leer = 60)
+              required: false
+              selector:
+                number:
+                  min: 0.0
+                  max: 100.0
+                  step: 5.0
+                  unit_of_measurement: '%'
+                  mode: slider
     irrigation_duration:
       name: Bewässerungsdauer pro Ventil (Minuten)
       default: 20
@@ -26,6 +72,15 @@ blueprint:
           step: 1.0
           unit_of_measurement: min
           mode: box
+    weather_entity:
+      name: Wettervorhersage
+      description: Wetterentität für Regen- und Temperaturprüfung
+      selector:
+        entity:
+          domain:
+          - weather
+          reorder: false
+          multiple: false
     further_times:
       name: Weitere Bewässerungszeiten
       description: Bis zu 2 zusätzliche Tageszeiten aktivierbar
@@ -52,255 +107,6 @@ blueprint:
           default: '18:00:00'
           selector:
             time: {}
-    valve_section_1:
-      name: Ventil 1
-      icon: mdi:valve
-      collapsed: false
-      input:
-        valve_1:
-          name: Schalter / Ventil
-          description: Leer lassen um dieses Ventil zu deaktivieren
-          default: ''
-          selector:
-            entity:
-              filter:
-              - domain:
-                - switch
-              - domain:
-                - valve
-              multiple: false
-        valve_1_moisture_sensor:
-          name: Feuchtigkeitssensor (optional)
-          description: Bewässerung nur starten wenn Feuchtigkeit unter dem Schwellwert liegt
-          default: ''
-          selector:
-            entity:
-              filter:
-              - domain:
-                - sensor
-                device_class:
-                - moisture
-              multiple: false
-        valve_1_moisture_threshold:
-          name: Feuchtigkeitsschwellwert
-          description: Ventil überspringen wenn Bodenfeuchtigkeit ≥ diesem Wert
-          default: 60
-          selector:
-            number:
-              min: 0.0
-              max: 100.0
-              step: 5.0
-              unit_of_measurement: '%'
-              mode: slider
-    valve_section_2:
-      name: Ventil 2
-      icon: mdi:valve
-      collapsed: true
-      input:
-        valve_2:
-          name: Schalter / Ventil
-          description: Leer lassen um dieses Ventil zu deaktivieren
-          default: ''
-          selector:
-            entity:
-              filter:
-              - domain:
-                - switch
-              - domain:
-                - valve
-              multiple: false
-        valve_2_moisture_sensor:
-          name: Feuchtigkeitssensor (optional)
-          description: Bewässerung nur starten wenn Feuchtigkeit unter dem Schwellwert liegt
-          default: ''
-          selector:
-            entity:
-              filter:
-              - domain:
-                - sensor
-                device_class:
-                - moisture
-              multiple: false
-        valve_2_moisture_threshold:
-          name: Feuchtigkeitsschwellwert
-          description: Ventil überspringen wenn Bodenfeuchtigkeit ≥ diesem Wert
-          default: 60
-          selector:
-            number:
-              min: 0.0
-              max: 100.0
-              step: 5.0
-              unit_of_measurement: '%'
-              mode: slider
-    valve_section_3:
-      name: Ventil 3
-      icon: mdi:valve
-      collapsed: true
-      input:
-        valve_3:
-          name: Schalter / Ventil
-          description: Leer lassen um dieses Ventil zu deaktivieren
-          default: ''
-          selector:
-            entity:
-              filter:
-              - domain:
-                - switch
-              - domain:
-                - valve
-              multiple: false
-        valve_3_moisture_sensor:
-          name: Feuchtigkeitssensor (optional)
-          description: Bewässerung nur starten wenn Feuchtigkeit unter dem Schwellwert liegt
-          default: ''
-          selector:
-            entity:
-              filter:
-              - domain:
-                - sensor
-                device_class:
-                - moisture
-              multiple: false
-        valve_3_moisture_threshold:
-          name: Feuchtigkeitsschwellwert
-          description: Ventil überspringen wenn Bodenfeuchtigkeit ≥ diesem Wert
-          default: 60
-          selector:
-            number:
-              min: 0.0
-              max: 100.0
-              step: 5.0
-              unit_of_measurement: '%'
-              mode: slider
-    valve_section_4:
-      name: Ventil 4
-      icon: mdi:valve
-      collapsed: true
-      input:
-        valve_4:
-          name: Schalter / Ventil
-          description: Leer lassen um dieses Ventil zu deaktivieren
-          default: ''
-          selector:
-            entity:
-              filter:
-              - domain:
-                - switch
-              - domain:
-                - valve
-              multiple: false
-        valve_4_moisture_sensor:
-          name: Feuchtigkeitssensor (optional)
-          description: Bewässerung nur starten wenn Feuchtigkeit unter dem Schwellwert liegt
-          default: ''
-          selector:
-            entity:
-              filter:
-              - domain:
-                - sensor
-                device_class:
-                - moisture
-              multiple: false
-        valve_4_moisture_threshold:
-          name: Feuchtigkeitsschwellwert
-          description: Ventil überspringen wenn Bodenfeuchtigkeit ≥ diesem Wert
-          default: 60
-          selector:
-            number:
-              min: 0.0
-              max: 100.0
-              step: 5.0
-              unit_of_measurement: '%'
-              mode: slider
-    valve_section_5:
-      name: Ventil 5
-      icon: mdi:valve
-      collapsed: true
-      input:
-        valve_5:
-          name: Schalter / Ventil
-          description: Leer lassen um dieses Ventil zu deaktivieren
-          default: ''
-          selector:
-            entity:
-              filter:
-              - domain:
-                - switch
-              - domain:
-                - valve
-              multiple: false
-        valve_5_moisture_sensor:
-          name: Feuchtigkeitssensor (optional)
-          description: Bewässerung nur starten wenn Feuchtigkeit unter dem Schwellwert liegt
-          default: ''
-          selector:
-            entity:
-              filter:
-              - domain:
-                - sensor
-                device_class:
-                - moisture
-              multiple: false
-        valve_5_moisture_threshold:
-          name: Feuchtigkeitsschwellwert
-          description: Ventil überspringen wenn Bodenfeuchtigkeit ≥ diesem Wert
-          default: 60
-          selector:
-            number:
-              min: 0.0
-              max: 100.0
-              step: 5.0
-              unit_of_measurement: '%'
-              mode: slider
-    valve_section_6:
-      name: Ventil 6
-      icon: mdi:valve
-      collapsed: true
-      input:
-        valve_6:
-          name: Schalter / Ventil
-          description: Leer lassen um dieses Ventil zu deaktivieren
-          default: ''
-          selector:
-            entity:
-              filter:
-              - domain:
-                - switch
-              - domain:
-                - valve
-              multiple: false
-        valve_6_moisture_sensor:
-          name: Feuchtigkeitssensor (optional)
-          description: Bewässerung nur starten wenn Feuchtigkeit unter dem Schwellwert liegt
-          default: ''
-          selector:
-            entity:
-              filter:
-              - domain:
-                - sensor
-                device_class:
-                - moisture
-              multiple: false
-        valve_6_moisture_threshold:
-          name: Feuchtigkeitsschwellwert
-          description: Ventil überspringen wenn Bodenfeuchtigkeit ≥ diesem Wert
-          default: 60
-          selector:
-            number:
-              min: 0.0
-              max: 100.0
-              step: 5.0
-              unit_of_measurement: '%'
-              mode: slider
-    weather_entity:
-      name: Wettervorhersage
-      description: Wetterentität für Regen- und Temperaturprüfung
-      selector:
-        entity:
-          domain:
-          - weather
-          reorder: false
-          multiple: false
     weather_section:
       name: Wettercheck & Saison
       description: Schwellwerte für Regen, Temperatur und Winterpause
@@ -400,6 +206,7 @@ blueprint:
           selector:
             boolean: {}
 variables:
+  valves_config: !input valves
   irrigation_duration_val: !input irrigation_duration
   weather_entity: !input weather_entity
   forecast_hours: !input forecast_hours
@@ -411,24 +218,6 @@ variables:
   notify_devices_list: !input notify_devices
   notify_on_complete_val: !input notify_on_complete
   notify_on_skip_val: !input notify_on_skip
-  v1: !input valve_1
-  v1_s: !input valve_1_moisture_sensor
-  v1_t: !input valve_1_moisture_threshold
-  v2: !input valve_2
-  v2_s: !input valve_2_moisture_sensor
-  v2_t: !input valve_2_moisture_threshold
-  v3: !input valve_3
-  v3_s: !input valve_3_moisture_sensor
-  v3_t: !input valve_3_moisture_threshold
-  v4: !input valve_4
-  v4_s: !input valve_4_moisture_sensor
-  v4_t: !input valve_4_moisture_threshold
-  v5: !input valve_5
-  v5_s: !input valve_5_moisture_sensor
-  v5_t: !input valve_5_moisture_threshold
-  v6: !input valve_6
-  v6_s: !input valve_6_moisture_sensor
-  v6_t: !input valve_6_moisture_threshold
 triggers:
 - trigger: time
   at: !input trigger_time_1
@@ -508,27 +297,21 @@ actions:
         title: "\U0001F33F Gartenbewässerung"
         message: Bewässerung übersprungen – {{ weather_skip_reason | trim }}
   - stop: Wetter ungünstig
-- variables:
-    valves_config: "{% set ns = namespace(list=[]) %} {% for item in [\n  {'entity':
-      v1, 'sensor': v1_s, 'threshold': v1_t},\n  {'entity': v2, 'sensor': v2_s,
-      'threshold': v2_t},\n  {'entity': v3, 'sensor': v3_s, 'threshold': v3_t},\n
-      \ {'entity': v4, 'sensor': v4_s, 'threshold': v4_t},\n  {'entity': v5, 'sensor':
-      v5_s, 'threshold': v5_t},\n  {'entity': v6, 'sensor': v6_s, 'threshold': v6_t}\n]
-      %}\n  {% if item.entity is not none and item.entity != '' %}\n    {% set ns.list
-      = ns.list + [item] %}\n  {% endif %}\n{% endfor %} {{ ns.list }}\n"
 - if:
   - condition: template
-    value_template: '{{ valves_config | count == 0 }}'
+    value_template: '{{ valves_config is not iterable or valves_config is string
+      or valves_config | count == 0 }}'
   then:
   - stop: Keine Ventile konfiguriert
 - repeat:
     for_each: '{{ valves_config }}'
     sequence:
     - variables:
-        current_valve: '{{ repeat.item.entity }}'
-        moisture_ok: "{{ repeat.item.sensor is none or repeat.item.sensor == '' or\n
-          \  states(repeat.item.sensor) | float(0) < repeat.item.threshold | float
-          }}\n"
+        current_valve: '{{ repeat.item.valve }}'
+        current_sensor: "{{ repeat.item.get('moisture_sensor') | default('', true) }}"
+        current_threshold: "{{ repeat.item.get('moisture_threshold') | float(60) }}"
+        moisture_ok: "{{ current_sensor == '' or\n   states(current_sensor) | float(0)
+          < current_threshold }}\n"
     - if:
       - condition: template
         value_template: '{{ moisture_ok }}'
@@ -547,11 +330,12 @@ actions:
   then:
   - variables:
       completion_message: "{% set ns = namespace(watered=[], skipped=[]) %} {% for
-        item in valves_config %}\n  {% set ok = item.sensor is none or item.sensor
-        == ''\n              or states(item.sensor) | float(0) < item.threshold |
-        float %}\n  {% set name = state_attr(item.entity, 'friendly_name') | default(item.entity)
+        item in valves_config %}\n  {% set sensor = item.get('moisture_sensor') |
+        default('', true) %}\n  {% set threshold = item.get('moisture_threshold')
+        | float(60) %}\n  {% set ok = sensor == '' or states(sensor) | float(0) <
+        threshold %}\n  {% set name = state_attr(item.valve, 'friendly_name') | default(item.valve)
         %}\n  {% if ok %}\n    {% set ns.watered = ns.watered + [name] %}\n  {% else
-        %}\n    {% set ns.skipped = ns.skipped + [name ~ ' (Feuchte ausreichend)']
+        %}\n    {% set ns.skipped = ns.skipped + [name ~ ' (Boden feucht genug)']
         %}\n  {% endif %}\n{% endfor %} {% set ns2 = namespace(parts=[]) %} {% if
         ns.watered %}\n  {% set ns2.parts = ns2.parts + ['Bewässert: ' ~ ns.watered
         | join(', ') ~ ' – je ' ~ irrigation_duration_val ~ ' Min.'] %}\n{% endif
