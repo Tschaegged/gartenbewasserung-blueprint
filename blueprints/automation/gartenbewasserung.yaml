@@ -6,8 +6,9 @@ blueprint:
     Ventile bequem per „Hinzufügen"-Button anlegen – jedes mit optionalem eigenem
     Feuchtigkeitssensor und Schwellwert (Ventil wird übersprungen wenn der Boden
     feucht genug ist). Wettercheck: Regen, Regenwahrscheinlichkeit,
-    Temperaturvorhersage und Saisonschaltung. Push-Benachrichtigungen bei
-    Abschluss oder übersprungener Bewässerung.
+    Temperaturvorhersage und Saisonschaltung. Hitzeschutz: bei sehr hoher
+    Tagestemperatur wird unabhängig von der Bodenfeuchtigkeit bewässert.
+    Push-Benachrichtigungen bei Abschluss oder übersprungener Bewässerung.
 
   domain: automation
   author: Claude
@@ -179,6 +180,27 @@ blueprint:
               max: 12.0
               step: 1.0
               mode: box
+        enable_heat_override:
+          name: Hitzeschutz-Bewässerung aktivieren
+          description: >-
+            Bei sehr hoher Tagestemperatur wird unabhängig von der Bodenfeuchtigkeit
+            bewässert – der Feuchtigkeitssensor wird ignoriert.
+          default: false
+          selector:
+            boolean: {}
+        heat_temp_threshold:
+          name: Hitzeschutz-Temperaturschwelle (°C)
+          description: >-
+            Liegt das vorhergesagte Tagesmaximum über diesem Wert, wird die
+            Bodenfeuchtigkeit ignoriert und immer bewässert.
+          default: 30
+          selector:
+            number:
+              min: 20.0
+              max: 50.0
+              step: 1.0
+              unit_of_measurement: °C
+              mode: slider
     notify_section:
       name: Benachrichtigungen
       description: Push-Nachrichten an Mobilgeräte senden
@@ -205,6 +227,18 @@ blueprint:
           default: false
           selector:
             boolean: {}
+        notify_title_complete:
+          name: Titel – Abschlussnachricht
+          description: Titel der Push-Nachricht nach erfolgter Bewässerung
+          default: "✅ Gartenbewässerung abgeschlossen"
+          selector:
+            text: {}
+        notify_title_skip:
+          name: Titel – Überspringen-Nachricht
+          description: Titel der Push-Nachricht wenn die Bewässerung übersprungen wird
+          default: "🌿 Gartenbewässerung"
+          selector:
+            text: {}
 variables:
   valves_config: !input valves
   irrigation_duration_val: !input irrigation_duration
@@ -218,6 +252,10 @@ variables:
   notify_devices_list: !input notify_devices
   notify_on_complete_val: !input notify_on_complete
   notify_on_skip_val: !input notify_on_skip
+  notify_title_complete_val: !input notify_title_complete
+  notify_title_skip_val: !input notify_title_skip
+  enable_heat_override_val: !input enable_heat_override
+  heat_temp_threshold_val: !input heat_temp_threshold
 triggers:
 - trigger: time
   at: !input trigger_time_1
@@ -245,7 +283,7 @@ actions:
       target:
         device_id: !input notify_devices
       data:
-        title: "\U0001F33F Gartenbewässerung"
+        title: '{{ notify_title_skip_val }}'
         message: 'Bewässerung übersprungen – Saisonpause ({{ now().strftime(''%B'')
           }}, aktive Saison: Monat {{ season_start_month }}–{{ season_end_month }})'
   - stop: Saisonpause
@@ -282,6 +320,11 @@ actions:
       elif ns.max_temp < min_useful_temperature | float %}Tagesmaximum zu niedrig
       ({{ '%.1f' | format(ns.max_temp) }}°C) {% else %}Wetter ungünstig {% endif
       %}\n"
+    heat_override: "{% if not enable_heat_override_val %}false{% else %}{% set forecast
+      = forecast_response[weather_entity]['forecast'][:forecast_hours | int] %}{% set
+      ns = namespace(max_temp=-99.0) %}{% for h in forecast %}{% set ns.max_temp =
+      [ns.max_temp, h.temperature | default(-99) | float] | max %}{% endfor %}{{
+      ns.max_temp > heat_temp_threshold_val | float }}{% endif %}"
 - if:
   - condition: template
     value_template: '{{ weather_skip }}'
@@ -294,7 +337,7 @@ actions:
       target:
         device_id: !input notify_devices
       data:
-        title: "\U0001F33F Gartenbewässerung"
+        title: '{{ notify_title_skip_val }}'
         message: Bewässerung übersprungen – {{ weather_skip_reason | trim }}
   - stop: Wetter ungünstig
 - if:
@@ -307,17 +350,17 @@ actions:
     pre_watered_list: "{% set ns = namespace(names=[]) %} {% for item in valves_config
       %}\n  {% set sensor = item.get('moisture_sensor') | default('', true) %}\n
       \ {% set threshold = item.get('moisture_threshold') | float(60) %}\n  {% set
-      ok = sensor == '' or states(sensor) | float(0) < threshold %}\n  {% set name
-      = state_attr(item.valve, 'friendly_name') | default(item.valve) %}\n  {% if
-      ok %}{% set ns.names = ns.names + [name] %}{% endif %}\n{% endfor %} {{ ns.names
-      | join(', ') }}\n"
+      ok = heat_override | bool or sensor == '' or states(sensor) | float(0) < threshold
+      %}\n  {% set name = state_attr(item.valve, 'friendly_name') | default(item.valve)
+      %}\n  {% if ok %}{% set ns.names = ns.names + [name] %}{% endif %}\n{% endfor
+      %} {{ ns.names | join(', ') }}\n"
     pre_skipped_list: "{% set ns = namespace(names=[]) %} {% for item in valves_config
       %}\n  {% set sensor = item.get('moisture_sensor') | default('', true) %}\n
       \ {% set threshold = item.get('moisture_threshold') | float(60) %}\n  {% set
-      ok = sensor == '' or states(sensor) | float(0) < threshold %}\n  {% set name
-      = state_attr(item.valve, 'friendly_name') | default(item.valve) %}\n  {% if
-      not ok %}{% set ns.names = ns.names + [name ~ ' (Boden feucht genug)'] %}{%
-      endif %}\n{% endfor %} {{ ns.names | join(', ') }}\n"
+      ok = heat_override | bool or sensor == '' or states(sensor) | float(0) < threshold
+      %}\n  {% set name = state_attr(item.valve, 'friendly_name') | default(item.valve)
+      %}\n  {% if not ok %}{% set ns.names = ns.names + [name ~ ' (Boden feucht genug)']
+      %}{% endif %}\n{% endfor %} {{ ns.names | join(', ') }}\n"
 - repeat:
     for_each: '{{ valves_config }}'
     sequence:
@@ -325,8 +368,8 @@ actions:
         current_valve: '{{ repeat.item.valve }}'
         current_sensor: "{{ repeat.item.get('moisture_sensor') | default('', true) }}"
         current_threshold: "{{ repeat.item.get('moisture_threshold') | float(60) }}"
-        moisture_ok: "{{ current_sensor == '' or\n   states(current_sensor) | float(0)
-          < current_threshold }}\n"
+        moisture_ok: "{{ heat_override | bool or current_sensor == '' or\n   states(current_sensor)
+          | float(0) < current_threshold }}\n"
     - if:
       - condition: template
         value_template: '{{ moisture_ok }}'
@@ -353,7 +396,7 @@ actions:
     target:
       device_id: !input notify_devices
     data:
-      title: ✅ Gartenbewässerung abgeschlossen
+      title: '{{ notify_title_complete_val }}'
       message: '{{ completion_message | trim }}'
 mode: single
 max_exceeded: silent
