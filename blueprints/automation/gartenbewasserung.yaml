@@ -8,7 +8,9 @@ blueprint:
     feucht genug ist). Wettercheck: Regen, Regenwahrscheinlichkeit,
     Temperaturvorhersage und Saisonschaltung. Hitzeschutz: bei sehr hoher
     Tagestemperatur wird unabhängig von der Bodenfeuchtigkeit bewässert.
-    Push-Benachrichtigungen bei Abschluss oder übersprungener Bewässerung.
+    Push-Benachrichtigungen bei Abschluss oder übersprungener Bewässerung –
+    Titel frei konfigurierbar. Die Abschlussmeldung zeigt korrekt, welche Ventile
+    bewässert und welche wegen Bodenfeuchtigkeit übersprungen wurden.
 
   domain: automation
   author: Claude
