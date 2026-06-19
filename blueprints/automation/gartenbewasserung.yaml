@@ -3,7 +3,7 @@ blueprint:
   source_url: https://github.com/Tschaegged/gartenbewasserung-blueprint/blob/main/blueprints/automation/gartenbewasserung.yaml
   description: >-
     Bewässert beliebig viele Ventile nacheinander täglich zur eingestellten Zeit.
-    Ventile bequem per „Hinzufügen“-Button anlegen – jedes mit optionalem eigenem
+    Ventile bequem per „Hinzufügen"-Button anlegen – jedes mit optionalem eigenem
     Feuchtigkeitssensor und Schwellwert (Ventil wird übersprungen wenn der Boden
     feucht genug ist). Wettercheck: Regen, Regenwahrscheinlichkeit,
     Temperaturvorhersage und Saisonschaltung. Push-Benachrichtigungen bei
@@ -303,6 +303,21 @@ actions:
       or valves_config | count == 0 }}'
   then:
   - stop: Keine Ventile konfiguriert
+- variables:
+    pre_watered_list: "{% set ns = namespace(names=[]) %} {% for item in valves_config
+      %}\n  {% set sensor = item.get('moisture_sensor') | default('', true) %}\n
+      \ {% set threshold = item.get('moisture_threshold') | float(60) %}\n  {% set
+      ok = sensor == '' or states(sensor) | float(0) < threshold %}\n  {% set name
+      = state_attr(item.valve, 'friendly_name') | default(item.valve) %}\n  {% if
+      ok %}{% set ns.names = ns.names + [name] %}{% endif %}\n{% endfor %} {{ ns.names
+      | join(', ') }}\n"
+    pre_skipped_list: "{% set ns = namespace(names=[]) %} {% for item in valves_config
+      %}\n  {% set sensor = item.get('moisture_sensor') | default('', true) %}\n
+      \ {% set threshold = item.get('moisture_threshold') | float(60) %}\n  {% set
+      ok = sensor == '' or states(sensor) | float(0) < threshold %}\n  {% set name
+      = state_attr(item.valve, 'friendly_name') | default(item.valve) %}\n  {% if
+      not ok %}{% set ns.names = ns.names + [name ~ ' (Boden feucht genug)'] %}{%
+      endif %}\n{% endfor %} {{ ns.names | join(', ') }}\n"
 - repeat:
     for_each: '{{ valves_config }}'
     sequence:
@@ -329,18 +344,11 @@ actions:
     value_template: '{{ notify_on_complete_val and notify_devices_list | count > 0 }}'
   then:
   - variables:
-      completion_message: "{% set ns = namespace(watered=[], skipped=[]) %} {% for
-        item in valves_config %}\n  {% set sensor = item.get('moisture_sensor') |
-        default('', true) %}\n  {% set threshold = item.get('moisture_threshold')
-        | float(60) %}\n  {% set ok = sensor == '' or states(sensor) | float(0) <
-        threshold %}\n  {% set name = state_attr(item.valve, 'friendly_name') | default(item.valve)
-        %}\n  {% if ok %}\n    {% set ns.watered = ns.watered + [name] %}\n  {% else
-        %}\n    {% set ns.skipped = ns.skipped + [name ~ ' (Boden feucht genug)']
-        %}\n  {% endif %}\n{% endfor %} {% set ns2 = namespace(parts=[]) %} {% if
-        ns.watered %}\n  {% set ns2.parts = ns2.parts + ['Bewässert: ' ~ ns.watered
-        | join(', ') ~ ' – je ' ~ irrigation_duration_val ~ ' Min.'] %}\n{% endif
-        %} {% if ns.skipped %}\n  {% set ns2.parts = ns2.parts + ['Übersprungen: '
-        ~ ns.skipped | join(', ')] %}\n{% endif %} {{ ns2.parts | join('\\n') }}\n"
+      completion_message: "{% set ns2 = namespace(parts=[]) %} {% if pre_watered_list
+        | trim %}\n  {% set ns2.parts = ns2.parts + ['Bewässert: ' ~ pre_watered_list
+        | trim ~ ' – je ' ~ irrigation_duration_val ~ ' Min.'] %}\n{% endif %} {%
+        if pre_skipped_list | trim %}\n  {% set ns2.parts = ns2.parts + ['Übersprungen:
+        ' ~ pre_skipped_list | trim] %}\n{% endif %} {{ ns2.parts | join('\\n') }}\n"
   - action: notify.send_message
     target:
       device_id: !input notify_devices
