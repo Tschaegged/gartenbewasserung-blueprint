@@ -10,7 +10,9 @@ blueprint:
     Tagestemperatur wird unabhängig von der Bodenfeuchtigkeit bewässert.
     Push-Benachrichtigungen bei Abschluss oder übersprungener Bewässerung –
     Titel frei konfigurierbar. Die Abschlussmeldung zeigt korrekt, welche Ventile
-    bewässert und welche wegen Bodenfeuchtigkeit übersprungen wurden.
+    bewässert und welche wegen Bodenfeuchtigkeit übersprungen wurden. In der
+    Saisonpause meldet sich das Blueprint wahlweise nie, einmal zu Beginn der
+    Pause oder jeden Tag.
 
   domain: automation
   author: Claude
@@ -225,10 +227,28 @@ blueprint:
             boolean: {}
         notify_on_skip:
           name: Bei übersprungener Bewässerung benachrichtigen
-          description: Nachricht senden wenn Saison oder Wetter die Bewässerung verhindern
+          description: >-
+            Nachricht senden, wenn das Wetter die Bewässerung verhindert (Regen,
+            Kälte, Frost). Für die Saisonpause gibt es eine eigene Einstellung.
           default: false
           selector:
             boolean: {}
+        season_pause_notify:
+          name: Benachrichtigung in der Saisonpause
+          description: >-
+            Außerhalb der Saison läuft die Automation weiter täglich, bewässert aber
+            nicht. „Einmal" meldet nur am ersten Tag der Pause, dass die Bewässerung
+            bis zum Saisonbeginn ruht. „Jeden Tag" entspricht dem früheren Verhalten.
+          default: einmal
+          selector:
+            select:
+              options:
+                - label: Nie
+                  value: nie
+                - label: Einmal am ersten Tag der Pause
+                  value: einmal
+                - label: Jeden Tag
+                  value: taeglich
         notify_title_complete:
           name: Titel – Abschlussnachricht
           description: Titel der Push-Nachricht nach erfolgter Bewässerung
@@ -254,6 +274,7 @@ variables:
   notify_devices_list: !input notify_devices
   notify_on_complete_val: !input notify_on_complete
   notify_on_skip_val: !input notify_on_skip
+  season_pause_notify_val: !input season_pause_notify
   notify_title_complete_val: !input notify_title_complete
   notify_title_skip_val: !input notify_title_skip
   enable_heat_override_val: !input enable_heat_override
@@ -261,33 +282,54 @@ variables:
 triggers:
 - trigger: time
   at: !input trigger_time_1
+  id: zeit_1
 - trigger: time
   at: !input trigger_time_2
   enabled: !input enable_time_2
+  id: zeit_2
 - trigger: time
   at: !input trigger_time_3
   enabled: !input enable_time_3
+  id: zeit_3
 conditions: []
 actions:
 - variables:
     season_active: '{% set m = now().month %} {% set s = season_start_month | int
       %} {% set e = season_end_month | int %} {{ m >= s and m <= e if s <= e else
       (m >= s or m <= e) }}'
+    # War gestern noch Saison, ist heute der erste Tag der Saisonpause.
+    season_active_yesterday: '{% set m = (now() - timedelta(days=1)).month %} {%
+      set s = season_start_month | int %} {% set e = season_end_month | int %} {{
+      m >= s and m <= e if s <= e else (m >= s or m <= e) }}'
+    monatsnamen: ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli',
+      'August', 'September', 'Oktober', 'November', 'Dezember']
 - if:
   - condition: template
     value_template: '{{ not season_active }}'
   then:
+  # Saisonpause: je nach Einstellung nie, einmal am ersten Pausentag oder jeden
+  # Tag melden. "Einmal" nur beim ersten Zeit-Trigger, damit es bei mehreren
+  # Bewaesserungszeiten trotzdem bei einer einzigen Nachricht bleibt.
   - if:
     - condition: template
-      value_template: '{{ notify_on_skip_val and notify_devices_list | count > 0 }}'
+      value_template: >-
+        {{ notify_devices_list | count > 0 and (
+             season_pause_notify_val == 'taeglich'
+             or (season_pause_notify_val == 'einmal' and season_active_yesterday
+                 and trigger.id == 'zeit_1')) }}
     then:
     - action: notify.send_message
       target:
         device_id: !input notify_devices
       data:
         title: '{{ notify_title_skip_val }}'
-        message: 'Bewässerung übersprungen – Saisonpause ({{ now().strftime(''%B'')
-          }}, aktive Saison: Monat {{ season_start_month }}–{{ season_end_month }})'
+        message: >-
+          {% if season_pause_notify_val == 'einmal' %}Saisonpause: Die Bewässerung
+          ruht bis zum Saisonbeginn im {{ monatsnamen[(season_start_month | int) - 1] }}.
+          Bis dahin kommen keine weiteren Meldungen.{% else %}Bewässerung übersprungen –
+          Saisonpause ({{ monatsnamen[now().month - 1] }}, aktive Saison:
+          {{ monatsnamen[(season_start_month | int) - 1] }} bis
+          {{ monatsnamen[(season_end_month | int) - 1] }}){% endif %}
   - stop: Saisonpause
 - action: weather.get_forecasts
   data:

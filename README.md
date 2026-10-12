@@ -14,6 +14,8 @@ Ein flexibles Blueprint für automatische Gartenbewässerung mit Wettercheck, Bo
 - **Bodenfeuchtigkeitssensor** – optionaler Sensor überspringt Bewässerung wenn Boden bereits feucht
 - **Saisonsteuerung** – Bewässerung nur zwischen konfigurierbaren Monaten aktiv
 - **Push-Benachrichtigungen** – bei Abschluss oder übersprungener Bewässerung
+- **Ruhige Saisonpause** – außerhalb der Saison wahlweise keine Meldung, eine einzige am ersten
+  Pausentag (Standard) oder wie früher jeden Tag
 
 ## Installation
 
@@ -48,6 +50,7 @@ https://raw.githubusercontent.com/Tschaegged/gartenbewasserung-blueprint/main/bl
 | Nutztemperatur | Min. vorhergesagtes Tagesmaximum | 12 °C |
 | Saisonbeginn | Erster aktiver Monat | April (4) |
 | Saisonende | Letzter aktiver Monat | Oktober (10) |
+| Benachrichtigung in der Saisonpause | Nie / einmal am ersten Pausentag / jeden Tag | einmal |
 | Bodenfeuchtigkeitssensor | Optionaler Sensor | – |
 | Feuchtigkeitsschwellwert | Skip wenn ≥ diesem Wert | 60 % |
 
