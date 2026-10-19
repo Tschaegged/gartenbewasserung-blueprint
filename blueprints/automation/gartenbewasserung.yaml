@@ -319,6 +319,7 @@ actions:
                  and trigger.id == 'zeit_1')) }}
     then:
     - action: notify.send_message
+      continue_on_error: true
       target:
         device_id: !input notify_devices
       data:
@@ -378,6 +379,7 @@ actions:
       value_template: '{{ notify_on_skip_val and notify_devices_list | count > 0 }}'
     then:
     - action: notify.send_message
+      continue_on_error: true
       target:
         device_id: !input notify_devices
       data:
@@ -437,6 +439,7 @@ actions:
         if pre_skipped_list | trim %}\n  {% set ns2.parts = ns2.parts + ['Übersprungen:
         ' ~ pre_skipped_list | trim] %}\n{% endif %} {{ ns2.parts | join('\\n') }}\n"
   - action: notify.send_message
+    continue_on_error: true
     target:
       device_id: !input notify_devices
     data:
